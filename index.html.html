@@ -52,7 +52,7 @@
   };
 
   const geocoder = async (address) => {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ", DK")}`;
     const response = await fetch(url);
     const data = await response.json();
     return data[0] ? [parseFloat(data[0].lat), parseFloat(data[0].lon)] : null;
