@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kundekort - Danmark</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map { height: 80vh; width: 100%; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    #controls { padding: 1em; background: #f4f4f4; display: flex; flex-wrap: wrap; gap: 1em; align-items: center; }
+    #stats { padding: 1em; background: #e8e8e8; }
+  </style>
+</head>
+<body>
+<div id="controls">
+  <label for="search">Søg virksomhed: </label>
+  <input type="text" id="search" placeholder="Indtast navn...">
+  <label for="subscription">Filtrér efter abonnement: </label>
+  <select id="subscription">
+    <option value="all">Alle</option>
+    <option value="PRO">PRO</option>
+    <option value="BASIC">BASIC</option>
+    <option value="PREMIUM">PREMIUM</option>
+  </select>
+</div>
+<div id="map"></div>
+<div id="stats"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  const map = L.map('map').setView([56, 10], 7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap bidragsydere'
+  }).addTo(map);
+
+  let markers = [];
+  let customers = [];
+
+  const colors = {
+    "PRO": "blue",
+    "BASIC": "green",
+    "PREMIUM": "orange",
+    "Ukendt": "gray"
+  };
+
+  const customMarker = (color) => {
+    return L.divIcon({
+      className: 'custom-div-icon',
+      html: `<div style="background-color:${color};width:14px;height:14px;border-radius:50%;border:2px solid white"></div>`
+    });
+  };
+
+  const geocoder = async (address) => {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ", DK")}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    return data[0] ? [parseFloat(data[0].lat), parseFloat(data[0].lon)] : null;
+  };
+
+  const updateStats = () => {
+    const counts = customers.reduce((acc, c) => {
+      acc[c.subscription] = (acc[c.subscription] || 0) + 1;
+      return acc;
+    }, {});
+    let html = '<h3>Abonnementsstatistik</h3><ul>';
+    for (const [key, value] of Object.entries(counts)) {
+      html += `<li>${key}: ${value}</li>`;
+    }
+    html += '</ul>';
+    document.getElementById('stats').innerHTML = html;
+  };
+
+  const addMarkers = async () => {
+    for (const customer of customers) {
+      const coords = await geocoder(customer.address);
+      if (coords) {
+        const color = colors[customer.subscription] || "gray";
+        const marker = L.marker(coords, { icon: customMarker(color) })
+          .bindPopup(`<b>${customer.name}</b><br>${customer.address}<br><i>${customer.subscription}</i>`);
+        marker.customerName = customer.name.toLowerCase();
+        marker.subscription = customer.subscription;
+        marker.addTo(map);
+        markers.push(marker);
+      }
+    }
+    updateStats();
+  };
+
+  const filterMarkers = () => {
+    const searchVal = document.getElementById('search').value.toLowerCase();
+    const subscriptionVal = document.getElementById('subscription').value;
+    markers.forEach(marker => {
+      const matchName = marker.customerName.includes(searchVal);
+      const matchSub = subscriptionVal === 'all' || marker.subscription === subscriptionVal;
+      if (matchName && matchSub) {
+        marker.addTo(map);
+      } else {
+        map.removeLayer(marker);
+      }
+    });
+  };
+
+  document.getElementById('search').addEventListener('input', filterMarkers);
+  document.getElementById('subscription').addEventListener('change', filterMarkers);
+
+  // Automatisk indlæsning fra Google Sheets JSON
+  fetch("https://script.google.com/macros/s/AKfycbyk9ck2xIV7sIMoSVa2_KuwUKlx8aaNuweMoKxY-srf0jSNsyFBe16nfqRq-R7g96Dqcw/exec")
+    .then(res => res.json())
+    .then(data => {
+      customers = data;
+      addMarkers();
+    });
+</script>
+</body>
+</html>
