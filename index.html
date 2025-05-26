@@ -105,7 +105,7 @@
   document.getElementById('subscription').addEventListener('change', filterMarkers);
 
   // Automatisk indlæsning fra Google Sheets JSON
-  fetch("https://script.google.com/macros/s/AKfycbyk9ck2xIV7sIMoSVa2_KuwUKlx8aaNuweMoKxY-srf0jSNsyFBe16nfqRq-R7g96Dqcw/exec")
+  fetch("https://corsproxy.io/?https://script.google.com/macros/s/AKfycbyk9ck2xIV7sIMoSVa2_KuwUKlx8aaNuweMoKxY-srf0jSNsyFBe16nfqRq-R7g96Dqcw/exec")
     .then(res => res.json())
     .then(data => {
       customers = data;
